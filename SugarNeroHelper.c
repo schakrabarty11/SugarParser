@@ -11,7 +11,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <regex.h>
-#include "/usr/local/Cellar/php55/5.5.26/include/php/ext/sugarnero/SugarNeroHelper.h"
+#include "SugarNeroHelper.h"
 
 SUGAR_BUILD_RESULT copyFileContentToBuffer(const char *filePath, char **outputBuffer, size_t *outputSize) {
     char *buffer;
