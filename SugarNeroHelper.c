@@ -13,6 +13,10 @@
 #include <regex.h>
 #include "SugarNeroHelper.h"
 
+SUGAR_BUILD_FLAVOR lastFlavor = SUGAR_BUILD_FLAVOR_NONE;
+
+
+
 SUGAR_BUILD_RESULT copyFileContentToBuffer(const char *filePath, char **outputBuffer, size_t *outputSize) {
     char *buffer;
     size_t size;
@@ -89,31 +93,33 @@ SUGAR_BUILD_RESULT stringToArrayOfLines(const char *buffer, char ***arrayOutput,
     return SUGAR_BUILD_RESULT_PASS;
 }
 
-const char *arrayOfLinesToString(char **array, size_t count) {
+char *arrayOfLinesToString(char **array, size_t count) {
     size_t totalLength = 0;
     
     char *result = 0;
-    for (size_t i = 0; i < count; i++) {
+    for (size_t i = 1; i < count; i++) {
         totalLength += (strlen(array[i]) + 1); // plus a '\n' character
     }
     
     result = malloc((totalLength + 1) * sizeof(char));
     result[0] = 0;
-    
-    for (size_t i = 0; i < count; i++) {
+    strcat(result, " ");
+    for (size_t i = 1; i < count; i++) {
         strcat(result, array[i]);
-        
-        if (i < count - 1) {
+        if (i < count -1) {
             strcat(result, "\n");
         }
     }
     
+  
     result[totalLength] = 0;
+    
     return result;
 }
 
-char *processFile(char *buffer, SUGAR_BUILD_FLAVOR buildFlavor) {
+char *processFile(char *buffer, SUGAR_BUILD_FLAVOR mainBuildFlavor) {
     // get number of lines in buffer
+
     SUGAR_BUILD_RESULT result = SUGAR_BUILD_RESULT_PASS;
     
     char **arrayOfLines = 0;
@@ -123,6 +129,8 @@ char *processFile(char *buffer, SUGAR_BUILD_FLAVOR buildFlavor) {
     MatchCondition matchedConditions[10] = {0};
     size_t matchedConditionCount;
     SUGAR_BUILD_MARK currentBuildMark = SUGAR_BUILD_MARK_NONE;
+    SUGAR_BUILD_FLAVOR currentBuildFlavor = mainBuildFlavor;
+    
     
     if (SUGAR_BUILD_RESULT_FAIL == stringToArrayOfLines(buffer, &arrayOfLines, &lineCount)) {
         return NULL;
@@ -131,23 +139,39 @@ char *processFile(char *buffer, SUGAR_BUILD_FLAVOR buildFlavor) {
     for (size_t i = 0; i < lineCount; i++) {
         const char *line = arrayOfLines[i];
         SUGAR_BUILD_MARK buildMark;
+        SUGAR_BUILD_FLAVOR buildFlavor;
         result = getSugarBuildMark(line, &buildMark, matchedConditions, ARRAY_SIZE(matchedConditions), &matchedConditionCount);
         if (SUGAR_BUILD_RESULT_PASS != result) {
             return NULL;
         }
         
         if (SUGAR_BUILD_MARK_NONE == buildMark) {
-            if (currentBuildMark != SUGAR_BUILD_MARK_NONE) {
-                arrayOfLines[i] = commentOutLine(line);
+            
+            if(currentBuildMark == SUGAR_BUILD_MARK_BEGIN){
+                if(lastFlavor > mainBuildFlavor){
+                    arrayOfLines[i] = commentOutLine(line);
+                }
+            }else if (currentBuildMark != SUGAR_BUILD_MARK_NONE) {
+                //arrayOfLines[i] = commentOutLine(line);
             }
+            
+            
         } else {
+            currentBuildMark = buildMark;
             if (SUGAR_BUILD_MARK_FILE == buildMark) {
                 currentBuildMark = SUGAR_BUILD_MARK_FILE;
             }
         }
     }
+    /*php_printf("<br>|||||<br>");
+    for(int i = 0; i<lineCount; i++){
+        php_printf("%s<br>", arrayOfLines[i]);
+    }
     
-    return NULL;
+    php_printf("<br>|||||<br>");
+    php_printf("%s<br>", to_return1);*/
+    char* to_return = arrayOfLinesToString(arrayOfLines, lineCount);
+    return to_return;
 }
 
 char *commentOutLine(const char *line) {
@@ -265,22 +289,33 @@ SUGAR_BUILD_RESULT parseSugarBuildOptions(const char *options, MatchCondition ma
             
             if (matches[1].rm_so != -1) {
                 safeStringCopy(matchedConditions[matchedConditionCount].logicalOperator, MAX_CONDITION_PROPERTY_LEN, currentOptions + matches[1].rm_so, matches[1].rm_eo - matches[1].rm_so);
-                php_printf("%lu: Logical operator: %s<br>", matchedConditionCount, matchedConditions[matchedConditionCount].logicalOperator);
+                /*php_printf("%lu: Logical operator: %s<br>", matchedConditionCount, matchedConditions[matchedConditionCount].logicalOperator);*/
             }
             
             if (matches[2].rm_so != -1) {
                 safeStringCopy(matchedConditions[matchedConditionCount].key, MAX_CONDITION_PROPERTY_LEN, currentOptions + matches[2].rm_so, matches[2].rm_eo - matches[2].rm_so);
-                php_printf("%lu: Key             : %s<br>", matchedConditionCount, matchedConditions[matchedConditionCount].key);
+                /*php_printf("%lu: Key             : %s<br>", matchedConditionCount, matchedConditions[matchedConditionCount].key);*/
             }
             
             if (matches[3].rm_so != -1) {
                 safeStringCopy(matchedConditions[matchedConditionCount].operator, MAX_CONDITION_PROPERTY_LEN, currentOptions + matches[3].rm_so, matches[3].rm_eo - matches[3].rm_so);
-                php_printf("%lu: Operator        : %s<br>", matchedConditionCount, matchedConditions[matchedConditionCount].operator);
+                /*php_printf("%lu: Operator        : %s<br>", matchedConditionCount, matchedConditions[matchedConditionCount].operator);*/
             }
             
             if (matches[4].rm_so != -1) {
                 safeStringCopy(matchedConditions[matchedConditionCount].value, MAX_CONDITION_PROPERTY_LEN, currentOptions + matches[4].rm_so, matches[4].rm_eo - matches[4].rm_so);
-                php_printf("%lu: Operator        : %s<br>", matchedConditionCount, matchedConditions[matchedConditionCount].value);
+                /*php_printf("%lu: Operator        : %s<br>", matchedConditionCount, matchedConditions[matchedConditionCount].value);*/
+                const char* flavor = matchedConditions[matchedConditionCount].value;
+                if (0 == strcmp(flavor, "pro")) {
+                    lastFlavor =  SUGAR_BUILD_FLAVOR_PROFESSIONAL;
+                } else if (0 == strcmp(flavor, "ent")) {
+                    lastFlavor =  SUGAR_BUILD_FLAVOR_ENTERPRISE;
+                } else if (0 == strcmp(flavor, "ult")) {
+                    lastFlavor =  SUGAR_BUILD_FLAVOR_ULTIMATE;
+                } else {
+                    lastFlavor =  SUGAR_BUILD_FLAVOR_NONE;
+                }
+               
             }
             matchedConditionCount++;
         }
@@ -293,7 +328,7 @@ SUGAR_BUILD_RESULT parseSugarBuildOptions(const char *options, MatchCondition ma
     
 }
 
-SUGAR_BUILD_FLAVOR buildFlavor(const char *flavor) {
+SUGAR_BUILD_FLAVOR getFlavor(const char *flavor) {
     if (0 == strcmp(flavor, "pro")) {
         return SUGAR_BUILD_FLAVOR_PROFESSIONAL;
     } else if (0 == strcmp(flavor, "ent")) {
@@ -323,12 +358,11 @@ SUGAR_BUILD_LOGICAL_OPERATOR logicalOperator(const char *condition) {
 
 int matchesCondition(MatchCondition condition, SUGAR_BUILD_FLAVOR currentBuildFlavor) {
     SUGAR_BUILD_FLAVOR conditionFlavor;
+
     if (0 == strcmp("flav", condition.key)) {
         conditionFlavor = buildFlavor(condition.value);
         
         if (isEqualCondition(condition)) {
-            if(currentBuildFlavor >= conditionFlavor)
-                php_printf("Current Flavor: %i, Condition Flavor: %i", currentBuildFlavor, conditionFlavor);
             return currentBuildFlavor >= conditionFlavor;
         } else {
             return currentBuildFlavor != conditionFlavor;
@@ -356,10 +390,10 @@ int matchesConditions(MatchCondition conditions[], size_t conditionsCount, SUGAR
     return result;
 }
 
-void testFunction(char* filePath){
+char* testFunction(const char* filePath, const char* buildFlavor){
     char *buffer;
     size_t size;
     copyFileContentToBuffer(filePath, &buffer, &size);
-    processFile(buffer, SUGAR_BUILD_FLAVOR_ULTIMATE);
+    return processFile(buffer, getFlavor(buildFlavor));
     
 }

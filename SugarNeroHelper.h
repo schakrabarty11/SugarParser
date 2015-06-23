@@ -64,13 +64,18 @@ typedef struct {
     char value[MAX_CONDITION_PROPERTY_LEN];             // value for flav or dep
 } MatchCondition;
 
+typedef struct {
+    char* content;
+    size_t size;
+} CharacterArray;
+
 SUGAR_BUILD_RESULT copyFileContentToBuffer(const char *filePath, char **outputBuffer, size_t *outputSize);
 char *processFile(char *buffer, SUGAR_BUILD_FLAVOR buildFlavor);
 SUGAR_BUILD_RESULT getSugarBuildMark(const char *line, SUGAR_BUILD_MARK *buildMark, MatchCondition *matchedConditions, size_t maxConditionCount, size_t *conditionCount);
 SUGAR_BUILD_RESULT parseSugarBuildOptions(const char *options, MatchCondition matchedConditions[], size_t maxConditionCount, size_t *conditionCount);
 SUGAR_BUILD_RESULT stringToArrayOfLines(const char *buffer, char ***arrayOutput, size_t *countOutput);
 size_t lineCountInString(const char *buffer);
-const char *arrayOfLinesToString(char **array, size_t count);
+char *arrayOfLinesToString(char **array, size_t count);
 char *commentOutLine(const char *line);
 int matchesCondition(MatchCondition condition, SUGAR_BUILD_FLAVOR currentBuildFlavor);
 int matchesConditions(MatchCondition conditions[], size_t conditionsCount, SUGAR_BUILD_FLAVOR currentBuildFlavor);
