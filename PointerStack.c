@@ -51,13 +51,6 @@ void PointerStack_free(PointerStack *pStack){
     free(pStack->data);
 }
 
-void PointerStack_setFree(PointerStack *pStack){
-    for(int i = 0; i < pStack->size; i++){
-        php_printf("FREE");
-        efree(pStack->data[i]);
-    }
-    
-}
 
 char* psmalloc(PointerStack *pStack, size_t size)
 {

@@ -16,9 +16,9 @@
 #include "PointerStack.c"
 
 SUGAR_BUILD_FLAVOR lastFlavor = SUGAR_BUILD_FLAVOR_NONE;
-Stack cStack;
+Stack cStack;               //Used to store all nested conditions.
 
-PointerStack *cPointers;
+PointerStack *cPointers;    //Used to store all memory allocations.
 
 
 
@@ -37,12 +37,10 @@ SUGAR_BUILD_RESULT copyFileContentToBuffer(const char *filePath, char **outputBu
     size = ftell(file);
     fseek(file, 0L, SEEK_SET);
     
-    //void *test = psmalloc(cPointers, size + 1);
     
     buffer = psmalloc(cPointers, size + 1);
-    
     //buffer = emalloc(size + 1);
-    //PointerStack_append(cPointers, buffer);
+    
     fread(buffer, size, 1, file);
     buffer[size] = 0;
     
@@ -84,7 +82,7 @@ SUGAR_BUILD_RESULT stringToArrayOfLines(const char *buffer, char ***arrayOutput,
     
     array = psmalloc(cPointers, sizeof(char*)*arrayCount);
     //array = emalloc(sizeof(char*) * arrayCount);
-    ////PointerStack_append(cPointers, array);
+
     
     while (1) {
         while (*end != '\n' && *end) { end++; };
@@ -95,7 +93,7 @@ SUGAR_BUILD_RESULT stringToArrayOfLines(const char *buffer, char ***arrayOutput,
         
         currentLine = strncpy(currentLine, start, lineLength);
         currentLine[lineLength] = 0;
-        //PointerStack_append(cPointers, currentLine);
+
         array[lineIndex] = currentLine;
         lineIndex++;
         if (!(*end)) { break; }
@@ -123,8 +121,7 @@ char *arrayOfLinesToString(char **array, size_t count) {
     result = psmalloc(cPointers, (totalLength+1)*sizeof(char));
     //result = emalloc((totalLength + 1) * sizeof(char));
     
-    result[0] = 0;
-    //strcat(result, " ");
+    result[0] = 0;      //Need to initialize a value before using strcat;
     for (size_t i = 0; i < count; i++) {
         if(i==0){
             if(sizeof(array[i])-5>0){
@@ -147,11 +144,10 @@ char *arrayOfLinesToString(char **array, size_t count) {
   
     result[totalLength] = 0;
     
-    //PointerStack_append(cPointers, result);
-    
     return result;
 }
 
+//This function is purely for debugging purposes
 void print_out(Conditions condition){
     for(int i = 0; i< condition.conditionCount; i++){
         MatchCondition c = condition.conditions[i];
@@ -159,13 +155,12 @@ void print_out(Conditions condition){
     }
 }
 
+
 char *processFile(char *buffer, SUGAR_BUILD_FLAVOR mainBuildFlavor) {
     // get number of lines in buffer
-    //cStack.classifiers = {0};
+    //Initialize the condition stack
     cStack.size = 0;
-    
     for(int i = 0; i < 10; i++){
-        //cStack.classifiers[i].conditions = {0};
         cStack.classifiers[i].conditionCount = 0;
     }
 
@@ -206,17 +201,19 @@ char *processFile(char *buffer, SUGAR_BUILD_FLAVOR mainBuildFlavor) {
     }
     
     
-    /*php_printf("<br>--------<br>");
+    /*php_printf("<br>----DEBUGGING----<br>");
     for(int i = 0; i<lineCount; i++){
         php_printf("%s<br>", arrayOfLines[i]);
     }*/
 
-    char* to_return = arrayOfLinesToString(arrayOfLines, lineCount);
-    for(size_t i=0; i<lineCount; i++){
-        //PointerStack_append(cPointers, arrayOfLines[i]);
-        //efree(arrayOfLines[i]);
+    /*for(size_t i=0; i<lineCount; i++){
+        PointerStack_append(cPointers, arrayOfLines[i]);
+        efree(arrayOfLines[i]);
     }
-    //efree(arrayOfLines);
+    efree(arrayOfLines);*/
+
+    char* to_return = arrayOfLinesToString(arrayOfLines, lineCount);
+    
     return to_return;
 }
 
@@ -227,7 +224,6 @@ char *commentOutLine(const char *line) {
     
     snprintf(newLine, length, "// %s", line);
     
-    //PointerStack_append(cPointers, newLine);
     return newLine;
 }
 
@@ -269,9 +265,9 @@ SUGAR_BUILD_RESULT getSugarBuildMark(const char *line, SUGAR_BUILD_MARK *buildMa
             } else if (0 == strncmp(SUGAR_BUILD_MARK_FILE_STR, line + matches[1].rm_so, matches[1].rm_eo - matches[1].rm_so)) {
                 *buildMark = SUGAR_BUILD_MARK_FILE;
             }
-            //            } else if (0 == strncmp(SUGAR_BUILD_MARK_ELSE_STR, line + matches[1].rm_so, matches[1].rm_eo - matches[1].rm_so)) {
-            //                *buildMark = SUGAR_BUILD_MARK_ELSE;
-            //            }
+            /*            } else if (0 == strncmp(SUGAR_BUILD_MARK_ELSE_STR, line + matches[1].rm_so, matches[1].rm_eo - matches[1].rm_so)) {
+                            *buildMark = SUGAR_BUILD_MARK_ELSE;
+                        }*/
             else {
                 result = SUGAR_BUILD_RESULT_FAIL;
             }
@@ -289,8 +285,7 @@ SUGAR_BUILD_RESULT getSugarBuildMark(const char *line, SUGAR_BUILD_MARK *buildMa
                 
                 parseSugarBuildOptions(optionString, matchedConditions, maxConditionCount, conditionCount, buildMark);
                 
-                //PointerStack_append(cPointers, optionString);
-                //free(optionString);
+                //efree(optionString);
             }
             
         }
@@ -339,12 +334,8 @@ SUGAR_BUILD_RESULT parseSugarBuildOptions(const char *options, MatchCondition ma
         
         if (success) {
             if(*buildMark!=SUGAR_BUILD_MARK_END){
-                //php_printf("Adding Size<br>");
-                //php_printf("<br>");
                 cStack.size++;
             }else if(*buildMark==SUGAR_BUILD_MARK_END){
-                //php_printf("Subtractng Size<br>");
-                //php_printf("<br>");
                 if(cStack.size!=0){
                     cStack.classifiers[cStack.size-1].conditionCount=0;
                     cStack.size--;
@@ -383,10 +374,6 @@ SUGAR_BUILD_RESULT parseSugarBuildOptions(const char *options, MatchCondition ma
             matchedConditionCount++;
         }
         
-        if(*buildMark == SUGAR_BUILD_MARK_END){
-            //php_printf("End<br>");
-
-        }
         
     }
     
@@ -470,11 +457,10 @@ int matchesConditions(MatchCondition conditions[], size_t conditionsCount, SUGAR
     return result;
 }
 
+//This is the function that gets called from Nero to start off the parsing.
 char* testFunction(const char* filePath, const char* buildFlavor, PointerStack* pStack){
     
     cPointers = pStack;
-    
-    
     
     char *buffer;
     size_t size;
