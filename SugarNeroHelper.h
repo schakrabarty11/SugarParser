@@ -26,10 +26,15 @@ static const char *SUGAR_BUILD_MARK_FILE_STR = "FILE";
 // static const char *SUGAR_BUILD_MARK_ELSE_STR = "ELSE";
 typedef enum {
     SUGAR_BUILD_FLAVOR_NONE,
-    // SUGAR_BUILD_FLAVOR_CORPORATE,
     SUGAR_BUILD_FLAVOR_PROFESSIONAL,
     SUGAR_BUILD_FLAVOR_ENTERPRISE,
-    SUGAR_BUILD_FLAVOR_ULTIMATE
+    SUGAR_BUILD_FLAVOR_ULTIMATE,
+    SUGAR_BUILD_FLAVOR_COMMUNITY,
+    SUGAR_BUILD_FLAVOR_DEV,
+    SUGAR_BUILD_FLAVOR_CORPORATE,
+    SUGAR_BUILD_FLAVOR_INTERNAL,
+
+
 } SUGAR_BUILD_FLAVOR;
 
 typedef enum {
@@ -57,6 +62,7 @@ typedef enum {
 #define MAX_CONDITION_PROPERTY_LEN 10
 #endif
 
+
 typedef struct {
     char logicalOperator[MAX_CONDITION_PROPERTY_LEN];   // && or || or nothing
     char key[MAX_CONDITION_PROPERTY_LEN];               // flav or dep
@@ -64,15 +70,21 @@ typedef struct {
     char value[MAX_CONDITION_PROPERTY_LEN];             // value for flav or dep
 } MatchCondition;
 
-typedef struct {
-    char* content;
+typedef struct{
+    MatchCondition conditions[10]; //There shouldn't be more than 10 concurrent classifiers.
+    size_t conditionCount;
+}Conditions;
+
+typedef struct{
+    Conditions classifiers[10]; //There shouldn't be more than 10 nested classifiers.
     size_t size;
-} CharacterArray;
+}Stack;
+
 
 SUGAR_BUILD_RESULT copyFileContentToBuffer(const char *filePath, char **outputBuffer, size_t *outputSize);
 char *processFile(char *buffer, SUGAR_BUILD_FLAVOR buildFlavor);
 SUGAR_BUILD_RESULT getSugarBuildMark(const char *line, SUGAR_BUILD_MARK *buildMark, MatchCondition *matchedConditions, size_t maxConditionCount, size_t *conditionCount);
-SUGAR_BUILD_RESULT parseSugarBuildOptions(const char *options, MatchCondition matchedConditions[], size_t maxConditionCount, size_t *conditionCount);
+SUGAR_BUILD_RESULT parseSugarBuildOptions(const char *options, MatchCondition matchedConditions[], size_t maxConditionCount, size_t *conditionCount, SUGAR_BUILD_MARK *buildMark);
 SUGAR_BUILD_RESULT stringToArrayOfLines(const char *buffer, char ***arrayOutput, size_t *countOutput);
 size_t lineCountInString(const char *buffer);
 char *arrayOfLinesToString(char **array, size_t count);
